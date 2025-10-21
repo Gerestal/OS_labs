@@ -1,6 +1,8 @@
+
 #include <windows.h>
 #include <iostream>
 #include <vector>
+#include <limits>
 using namespace std;
 
 const int time_for_Sleep = 5;
@@ -196,8 +198,10 @@ int main() {
             int konec;
             cout << "Enter the thread number to complete: ";
             cin >> konec;
-
-            if (cin.fail() || konec < 1 || konec > kol) {
+            if (cin.fail()) {
+                throw runtime_error("Invalid input: expected a number");
+            }
+            if (konec < 1 || konec > kol) {
                 cout << "Incorrect thread number." << endl;
                 for (int i = 0; i < kol; i++) {
                     if (!threadStopped[i]) {
