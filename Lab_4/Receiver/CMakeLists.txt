@@ -1,4 +1,4 @@
-add_library(Creator STATIC
+add_library(Receiver STATIC
     Receiver.cpp
 )
 
