@@ -4,6 +4,8 @@ project(MySolution LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 add_subdirectory(Sender)
 add_subdirectory(Receiver)
 add_subdirectory(tests)
