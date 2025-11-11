@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
                
                 string line;
                 while (true) {
-                    cout << "Enter the message (each < 20 characters). Empty line is an input: ";
+                    cout << "Enter the message (each <= 20 characters). Empty line is an input: ";
                     if (!getline(cin, line)) {
                         cerr << "Input error while reading message. Cancelled.\n";
                         break;
@@ -86,8 +86,8 @@ int main(int argc, char* argv[]) {
                         throw runtime_error("Massege required");
                     }
 
-                    if (line.size() >= 20) {
-                        cout << "The message must be less than 20 characters long. Try again.\n";
+                    if (line.size() > 20) {
+                        cout << "The message must be less than 21 characters long. Try again.\n";
                         continue;
                     }
 
