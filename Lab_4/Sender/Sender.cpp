@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 
 
         while (true) {
-            cout << "Enter command: ";
+            cout << "Enter command:\n";
             cout << "  1 - send a message to file\n";
             cout << "  2 - exit\n";
 
