@@ -1,4 +1,4 @@
-add_library(Receiver STATIC
+add_executable(Receiver
     Receiver.cpp
 )
 

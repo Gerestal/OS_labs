@@ -1,4 +1,4 @@
-add_library(Sender STATIC
+add_executable(Sender
     Sender.cpp
 )
 
