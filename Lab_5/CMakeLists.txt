@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.15)
+project(MySolution LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(FIRST_GROUP_BIN_DIR ${CMAKE_BINARY_DIR}/bin)
+set(SECOND_GROUP_BIN_DIR ${CMAKE_BINARY_DIR}/bin_th)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_BAK ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${FIRST_GROUP_BIN_DIR})
+
+add_subdirectory(Server)
+add_subdirectory(Client)
+add_subdirectory(tests)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SECOND_GROUP_BIN_DIR})
+
+add_subdirectory(Server_thread)
+add_subdirectory(Client_thread)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_BAK})
