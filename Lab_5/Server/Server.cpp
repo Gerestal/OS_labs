@@ -175,24 +175,20 @@ void HandleClient(HANDLE hPipe, const string& filename) {
         }
 
         if (operationStr == "1") { // modification
-           
             RecordLock& recordLock = GetRecordLock(employeeNum);
 
-            
-            AcquireSRWLockExclusive(&recordLock.lock);
-
             try {
-                
+               
+                AcquireSRWLockExclusive(&recordLock.lock);
                 employee emp = FindEmployeeInFile(employeeNum, filename);
+               
 
                 DWORD bytesWritten;
                 WriteFile(hPipe, &emp, sizeof(employee), &bytesWritten, NULL);
 
-                
                 success = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
                 if (!success || bytesRead == 0) {
                     cout << "Client disconnected during modification" << endl;
-                    ReleaseSRWLockExclusive(&recordLock.lock);
                     break;
                 }
 
@@ -201,15 +197,18 @@ void HandleClient(HANDLE hPipe, const string& filename) {
 
                 if (response.find("COMPLETE:") == 0) {
                     cout << "Client completed access to record " << employeeNum << " without changes" << endl;
+                    
+                    ReleaseSRWLockExclusive(&recordLock.lock);
                 }
                 else if (bytesRead == sizeof(employee)) {
-                   
                     employee newEmp;
                     memcpy(&newEmp, buffer, sizeof(employee));
 
                     if (newEmp.num == employeeNum) {
                         
+                       
                         bool result = ModifyEmployeeInFile(employeeNum, newEmp, filename);
+                        ReleaseSRWLockExclusive(&recordLock.lock);
 
                         string resultStr = result ? "SUCCESS" : "FAILED";
                         WriteFile(hPipe, resultStr.c_str(), resultStr.length() + 1, &bytesWritten, NULL);
@@ -225,17 +224,14 @@ void HandleClient(HANDLE hPipe, const string& filename) {
                         }
                     }
                 }
-
-                ReleaseSRWLockExclusive(&recordLock.lock);
-
             }
             catch (...) {
                 
                 ReleaseSRWLockExclusive(&recordLock.lock);
-                throw; 
+                throw;
             }
-
         }
+
         else if (operationStr == "2") { // reading
            
             RecordLock& recordLock = GetRecordLock(employeeNum);
