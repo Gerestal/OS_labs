@@ -373,7 +373,7 @@ int main() {
         PrintFile(filename);
 
         int num_prosses;
-        cout << "Enter number of prosses:";
+        cout << "Enter number of processes:";
         cin >> num_prosses;
         if (cin.fail() || num_prosses <= 0) {
             throw runtime_error("Incorrect array size.");
