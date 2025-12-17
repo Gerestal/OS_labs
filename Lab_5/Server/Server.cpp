@@ -127,12 +127,6 @@ RecordLock& GetRecordLock(int employeeNum) {
     return recordLocks[employeeNum];
 }
 
-struct SRWExclusiveGuard {
-    SRWLOCK* lock;
-    SRWExclusiveGuard(SRWLOCK* l) : lock(l) { AcquireSRWLockExclusive(lock); }
-    ~SRWExclusiveGuard() { ReleaseSRWLockExclusive(lock); }
-};
-
 struct SRWSharedGuard {
     SRWLOCK* lock;
     SRWSharedGuard(SRWLOCK* l) : lock(l) { AcquireSRWLockShared(lock); }
