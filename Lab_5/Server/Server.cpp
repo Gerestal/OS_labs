@@ -127,6 +127,17 @@ RecordLock& GetRecordLock(int employeeNum) {
     return recordLocks[employeeNum];
 }
 
+struct SRWExclusiveGuard {
+    SRWLOCK* lock;
+    SRWExclusiveGuard(SRWLOCK* l) : lock(l) { AcquireSRWLockExclusive(lock); }
+    ~SRWExclusiveGuard() { ReleaseSRWLockExclusive(lock); }
+};
+
+struct SRWSharedGuard {
+    SRWLOCK* lock;
+    SRWSharedGuard(SRWLOCK* l) : lock(l) { AcquireSRWLockShared(lock); }
+    ~SRWSharedGuard() { ReleaseSRWLockShared(lock); }
+};
 
 void HandleClient(HANDLE hPipe, const string& filename) {
     char buffer[512];
@@ -174,91 +185,82 @@ void HandleClient(HANDLE hPipe, const string& filename) {
             continue;
         }
 
+        char buffer[1024];
+
         if (operationStr == "1") { // modification
+            RecordLock& recordLock = GetRecordLock(employeeNum);
+            try {
+                SRWExclusiveGuard guard(&recordLock.lock); 
+
+                employee emp = FindEmployeeInFile(employeeNum, filename);
+                DWORD bytesWritten = 0;
+                WriteFile(hPipe, &emp, sizeof(employee), &bytesWritten, NULL);
+
+                while (true) {
+                    DWORD bytesRead = 0;
+                    if (!ReadFile(hPipe, buffer, sizeof(buffer), &bytesRead, NULL) || bytesRead == 0) {
+                        break; 
+                    }
+
+                    
+                    if (bytesRead == sizeof(employee)) {
+                        employee newEmp;
+                        memcpy(&newEmp, buffer, sizeof(employee));
+                        bool result = ModifyEmployeeInFile(employeeNum, newEmp, filename);
+
+                        string resultStr = result ? "SUCCESS" : "FAILED";
+                        WriteFile(hPipe, resultStr.c_str(), (DWORD)resultStr.length() + 1, &bytesWritten, NULL);
+
+                        
+                        cout << "Record " << employeeNum << " saved. Releasing lock." << endl;
+                        break;
+                    }
+                    
+                    else {
+                        buffer[bytesRead] = '\0';
+                        string resp(buffer);
+                        if (resp.find("COMPLETE") != string::npos) {
+                            cout << "Client cancelled modification for " << employeeNum << ". Releasing lock." << endl;
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (...) { throw; }
+        }
+        else if (operationStr == "2") { // reading
             RecordLock& recordLock = GetRecordLock(employeeNum);
 
             try {
                
-                AcquireSRWLockExclusive(&recordLock.lock);
+                SRWSharedGuard guard(&recordLock.lock);
+
                 employee emp = FindEmployeeInFile(employeeNum, filename);
-               
-
-                DWORD bytesWritten;
-                WriteFile(hPipe, &emp, sizeof(employee), &bytesWritten, NULL);
-
-                success = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
-                if (!success || bytesRead == 0) {
-                    cout << "Client disconnected during modification" << endl;
-                    break;
+                DWORD bytesWritten = 0;
+                if (!WriteFile(hPipe, &emp, sizeof(employee), &bytesWritten, NULL)) {
+                    cerr << "WriteFile failed: " << GetLastError() << endl;
                 }
-
-                buffer[bytesRead] = '\0';
-                string response(buffer);
-
-                if (response.find("COMPLETE:") == 0) {
-                    cout << "Client completed access to record " << employeeNum << " without changes" << endl;
+                else {
                     
-                    ReleaseSRWLockExclusive(&recordLock.lock);
-                }
-                else if (bytesRead == sizeof(employee)) {
-                    employee newEmp;
-                    memcpy(&newEmp, buffer, sizeof(employee));
-
-                    if (newEmp.num == employeeNum) {
+                    while (true) {
+                        DWORD bytesRead = 0;
+                        char textBuf[256];
                         
-                       
-                        bool result = ModifyEmployeeInFile(employeeNum, newEmp, filename);
-                        ReleaseSRWLockExclusive(&recordLock.lock);
+                        if (!ReadFile(hPipe, textBuf, sizeof(textBuf) - 1, &bytesRead, NULL) || bytesRead == 0) {
+                            cout << "Client disconnected during read" << endl;
+                            break; 
+                        }
 
-                        string resultStr = result ? "SUCCESS" : "FAILED";
-                        WriteFile(hPipe, resultStr.c_str(), resultStr.length() + 1, &bytesWritten, NULL);
-
-                        cout << "Record " << employeeNum << " modified: " << (result ? "success" : "failed") << endl;
-
-                        success = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
-                        if (success && bytesRead > 0) {
-                            buffer[bytesRead] = '\0';
-                            if (string(buffer).find("COMPLETE:") == 0) {
-                                cout << "Client completed access to record " << employeeNum << endl;
-                            }
+                        textBuf[bytesRead] = '\0';
+                        string response(textBuf);
+                        if (response.find("COMPLETE_READ") == 0) {
+                            cout << "Client completed read access to record " << employeeNum << endl;
+                            break; 
                         }
                     }
                 }
             }
             catch (...) {
-                
-                ReleaseSRWLockExclusive(&recordLock.lock);
-                throw;
-            }
-        }
-
-        else if (operationStr == "2") { // reading
-           
-            RecordLock& recordLock = GetRecordLock(employeeNum);
-
-            AcquireSRWLockShared(&recordLock.lock);
-
-            try {
-                
-                employee emp = FindEmployeeInFile(employeeNum, filename);
-
-                DWORD bytesWritten;
-                WriteFile(hPipe, &emp, sizeof(employee), &bytesWritten, NULL);
-
-                success = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL);
-                if (success && bytesRead > 0) {
-                    buffer[bytesRead] = '\0';
-                    string response(buffer);
-                    if (response.find("COMPLETE_READ:") == 0) {
-                        cout << "Client completed read access to record " << employeeNum << endl;
-                    }
-                }
-
-                ReleaseSRWLockShared(&recordLock.lock);
-
-            }
-            catch (...) {
-                ReleaseSRWLockShared(&recordLock.lock);
                 throw;
             }
         }
