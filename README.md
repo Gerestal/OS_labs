@@ -392,7 +392,7 @@ Kseniya Maslenchenko
 *Белорусский государственный университет, ФПМИ*  
 *2025-2026 учебный год*
 
-![БГУ](https://img.shields.io/badge/БГУ-ФПМИ-blue?style=for-the-badge)
+![БГУ]([https://img.shields.io/badge/[БГУ-ФПМИ](https://fpmi.bsu.by/)-blue?style=for-the-badge](https://bsu.by/))
 
 </div>
 
