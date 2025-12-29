@@ -193,9 +193,8 @@ Authorization: ЗАПРОСИТЕ У АВТОРА
 
 ---
 
-**Автор:** [Kseniya Maslenchenko]  
-
+**Автор:** Kseniya Maslenchenko 
 
 ---
-"""
+
 
