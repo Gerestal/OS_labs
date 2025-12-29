@@ -11,7 +11,12 @@
 #include "json.hpp"
 #include "sqlite3.h" 
 
+
 using json = nlohmann::ordered_json;
+
+#include "task.h"
+#include "database.h"
+
 using namespace httplib;
 
 
@@ -60,150 +65,6 @@ void log_request(const Request& req, int status) {
         << " -> " << status << std::endl;
 }
 
-struct Task {
-    int id;
-    std::string title;
-    std::string description;
-    std::string status;
-};
-
-void to_json(json& j, const Task& t) {
-    j = json{ {"id", t.id}, {"title", t.title}, {"description", t.description}, {"status", t.status} };
-}
-
-
-// SQLite
-class Database {
-private:
-    sqlite3* db;
-
-public:
-    Database(const std::string& db_name) {
-        if (sqlite3_open(db_name.c_str(), &db)) {
-            std::cerr << "Can't open database: " << sqlite3_errmsg(db) << std::endl;
-            exit(1);
-        }
-        create_table();
-    }
-
-    ~Database() {
-        sqlite3_close(db);
-    }
-
-    void create_table() {
-        const char* sql = "CREATE TABLE IF NOT EXISTS tasks ("
-            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-            "title TEXT NOT NULL,"
-            "description TEXT,"
-            "status TEXT NOT NULL);";
-        char* errMsg = 0;
-        if (sqlite3_exec(db, sql, 0, 0, &errMsg) != SQLITE_OK) {
-            std::cerr << "SQL error: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-        }
-    }
-
-    int create_task(const std::string& title, const std::string& desc, const std::string& status) {
-        std::string sql = "INSERT INTO tasks (title, description, status) VALUES (?, ?, ?);";
-        sqlite3_stmt* stmt;
-
-        sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0);
-        sqlite3_bind_text(stmt, 1, title.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, desc.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 3, status.c_str(), -1, SQLITE_STATIC);
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-            std::cerr << "Execution failed: " << sqlite3_errmsg(db) << std::endl;
-        }
-
-        int id = sqlite3_last_insert_rowid(db);
-        sqlite3_finalize(stmt);
-        return id;
-    }
-
-    std::vector<Task> get_all_tasks() {
-        std::vector<Task> tasks;
-        std::string sql = "SELECT id, title, description, status FROM tasks;";
-        sqlite3_stmt* stmt;
-
-        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0) == SQLITE_OK) {
-            while (sqlite3_step(stmt) == SQLITE_ROW) {
-                Task t;
-                t.id = sqlite3_column_int(stmt, 0);
-                t.title = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-                t.description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
-                t.status = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
-                tasks.push_back(t);
-            }
-        }
-        sqlite3_finalize(stmt);
-        return tasks;
-    }
-
-    bool get_task(int id, Task& t) {
-        std::string sql = "SELECT id, title, description, status FROM tasks WHERE id = ?;";
-        sqlite3_stmt* stmt;
-        bool found = false;
-
-        sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0);
-        sqlite3_bind_int(stmt, 1, id);
-
-        if (sqlite3_step(stmt) == SQLITE_ROW) {
-            t.id = sqlite3_column_int(stmt, 0);
-            t.title = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-            t.description = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
-            t.status = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
-            found = true;
-        }
-        sqlite3_finalize(stmt);
-        return found;
-    }
-
-    bool update_task(int id, const std::string& title, const std::string& desc, const std::string& status) {
-        std::string sql = "UPDATE tasks SET title = ?, description = ?, status = ? WHERE id = ?;";
-        sqlite3_stmt* stmt;
-
-        sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0);
-        sqlite3_bind_text(stmt, 1, title.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, desc.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 3, status.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 4, id);
-
-        int result = sqlite3_step(stmt);
-        sqlite3_finalize(stmt);
-
-        return (result == SQLITE_DONE) && (sqlite3_changes(db) > 0);
-    }
-
-    bool update_task_status(int id, const std::string& new_status) {
-        std::string sql = "UPDATE tasks SET status = ? WHERE id = ?;";
-        sqlite3_stmt* stmt;
-
-        if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0) != SQLITE_OK) return false;
-
-        sqlite3_bind_text(stmt, 1, new_status.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 2, id);
-
-        int result = sqlite3_step(stmt);
-        sqlite3_finalize(stmt);
-
-        return (result == SQLITE_DONE) && (sqlite3_changes(db) > 0);
-    }
-
-    bool delete_task(int id) {
-        std::string sql = "DELETE FROM tasks WHERE id = ?;";
-        sqlite3_stmt* stmt;
-
-        sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, 0);
-        sqlite3_bind_int(stmt, 1, id);
-
-        int result = sqlite3_step(stmt);
-        sqlite3_finalize(stmt);
-
-        return (result == SQLITE_DONE) && (sqlite3_changes(db) > 0);
-    }
-};
-
 
 int main() {
 
@@ -218,6 +79,10 @@ int main() {
        
         auto tasks = db.get_all_tasks();
         res.set_content(json(tasks).dump(), "application/json");
+
+        res.set_header("Cache-Control", "public, max-age=30");
+        res.set_header("ETag", std::to_string(std::hash<std::string>{}(json(tasks).dump())));
+
         log_request(req, 200);
         });
 
@@ -228,6 +93,10 @@ int main() {
         Task t;
         if (db.get_task(id, t)) {
             res.set_content(json(t).dump(), "application/json");
+
+            res.set_header("Cache-Control", "public, max-age=30");
+            res.set_header("ETag", std::to_string(std::hash<std::string>{}(json(t).dump())));
+
             log_request(req, 200);
         }
         else {
@@ -333,6 +202,26 @@ int main() {
             res.status = 404;
             log_request(req, 404);
         }
+        });
+
+    svr.Get("/cache/stats", [&](const Request& req, Response& res) {
+        if (!api_gateway_check(req, res)) return;
+
+        json stats = {
+            {"cache_size", db.get_cache_size()}
+        };
+
+        res.set_content(stats.dump(), "application/json");
+        log_request(req, 200);
+        });
+
+    svr.Delete("/cache", [&](const Request& req, Response& res) {
+        if (!api_gateway_check(req, res)) return;
+
+        db.clear_cache();
+        res.status = 200;
+        res.set_content("{\"message\":\"Cache cleared\"}", "application/json");
+        log_request(req, 200);
         });
 
     std::cout << "Server started at http://localhost:8080 with SQLite backend" << std::endl;
