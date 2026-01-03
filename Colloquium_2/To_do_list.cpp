@@ -5,6 +5,7 @@
 #include <chrono>
 #include <ctime>
 #include <map>
+#include <algorithm>
 
 
 #include "httplib.h"
@@ -114,6 +115,15 @@ int main() {
             std::string title = j.value("title", "No Title");
             std::string desc = j.value("description", "");
             std::string status = j.value("status", "todo");
+
+            std::vector<std::string> allowed_statuses = { "todo", "in_progress", "done" };
+            if (std::find(allowed_statuses.begin(), allowed_statuses.end(), status) == allowed_statuses.end()) {
+                res.status = 400;
+                json error_response = { {"error", "Invalid status value. Allowed values: todo, in_progress, done"} };
+                res.set_content(error_response.dump(), "application/json");
+                log_request(req, 400);
+                return;
+            }
 
             int new_id = db.create_task(title, desc, status);
 
