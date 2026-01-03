@@ -180,11 +180,7 @@ Authorization: ЗАПРОСИТЕ У АВТОРА
 </table>
 
 <h3>📝 Пример запроса (curl)</h3>
-<pre><code>curl -X POST \
-  -H "Authorization: ЗАПРОСИТЕ У АВТОРА" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Новая задача"}' \
-  http://localhost:8080/tasks</code></pre>
+<pre><code>curl -X POST -H "Authorization: ЗАПРОСИТЕ У АВТОРА" -H "Content-Type: application/json" -d "{\"title\":\"Task1\",\"description\":\"Test description\",\"status\":\"todo\"}" http://localhost:8080/tasks</code></pre>
 
 ## 🛡️ Безопасность
 
