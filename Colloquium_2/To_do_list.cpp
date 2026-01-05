@@ -54,6 +54,9 @@ bool api_gateway_check(const Request& req, Response& res) {
 
 // Logging
 void log_request(const Request& req, int status) {
+
+    //if (req.path == "/favicon.ico") return;
+
     auto now = std::chrono::system_clock::now();
     std::time_t now_time = std::chrono::system_clock::to_time_t(now);
 
@@ -232,6 +235,14 @@ int main() {
         res.status = 200;
         res.set_content("{\"message\":\"Cache cleared\"}", "application/json");
         log_request(req, 200);
+        });
+
+
+    svr.set_error_handler([](const Request& req, Response& res) {
+        if (res.status == 404) {
+            log_request(req, 404); 
+            res.set_content("{\"error\":\"Not Found\"}", "application/json");
+        }
         });
 
     std::cout << "Server started at http://localhost:8080 with SQLite backend" << std::endl;
