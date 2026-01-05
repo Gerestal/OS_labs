@@ -34,6 +34,7 @@ Colloq_2_3_sem/
 ├── httplib.h             # HTTP библиотека (сервер)
 ├── json.hpp              # Библиотека для работы с JSON
 └── CMakeLists.txt        # Файл сборки CMake
+└── to_do_client          # Папка с файлами. Реализация GUI-клиента для взаимодействия с REST API с использованием средств QT
 </pre>
 
 ## 🔧 Установка и запуск
@@ -179,10 +180,10 @@ Authorization: ЗАПРОСИТЕ У АВТОРА
 </table>
 
 <h3>📝 Пример запроса (curl)</h3>
-<pre><code>curl -X POST \
-  -H "Authorization: ЗАПРОСИТЕ У АВТОРА" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Новая задача"}' \
+<pre><code>curl -X POST 
+  -H "Authorization: ЗАПРОСИТЕ У АВТОРА" 
+  -H "Content-Type: application/json" 
+  -d "{\"title\":\"Task1\",\"description\":\"Test description\",\"status\":\"todo\"}" 
   http://localhost:8080/tasks</code></pre>
 
 ## 🛡️ Безопасность
