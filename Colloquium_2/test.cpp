@@ -1,47 +1,45 @@
-// tests/test.cpp - Пример тестов
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 #include "database.h"
 #include "task.h"
 
+TEST_CASE("Database creates and reads tasks", "[database]") {
 
-TEST_CASE("Database создает и читает задачи", "[database]") {
-    
     Database db(":memory:");
 
-    SECTION("Создание задачи возвращает ID > 0") {
-        int id = db.create_task("Тест", "Описание", "todo");
+    SECTION("Creating a task returns ID > 0") {
+        int id = db.create_task("Test", "Description", "todo");
         REQUIRE(id > 0);
     }
 
-    SECTION("Созданную задачу можно прочитать") {
-        int id = db.create_task("Читаемая задача", "", "todo");
+    SECTION("Created task can be read") {
+        int id = db.create_task("Readable task", "", "todo");
         Task task;
         bool found = db.get_task(id, task);
 
         REQUIRE(found == true);
-        REQUIRE(task.title == "Читаемая задача");
+        REQUIRE(task.title == "Readable task");
         REQUIRE(task.status == "todo");
     }
 }
 
-TEST_CASE("Database обновляет задачи", "[database]") {
+TEST_CASE("Database updates tasks", "[database]") {
     Database db(":memory:");
 
-    SECTION("Полное обновление задачи") {
-        int id = db.create_task("Старое", "Старое описание", "todo");
-        bool updated = db.update_task(id, "Новое", "Новое описание", "done");
+    SECTION("Full task update") {
+        int id = db.create_task("Old", "Old description", "todo");
+        bool updated = db.update_task(id, "New", "New description", "done");
 
         REQUIRE(updated == true);
 
         Task task;
         db.get_task(id, task);
-        REQUIRE(task.title == "Новое");
+        REQUIRE(task.title == "New");
         REQUIRE(task.status == "done");
     }
 
-    SECTION("Обновление только статуса") {
-        int id = db.create_task("Задача", "Описание", "todo");
+    SECTION("Update status only") {
+        int id = db.create_task("Task", "Description", "todo");
         bool updated = db.update_task_status(id, "in_progress");
 
         REQUIRE(updated == true);
@@ -49,16 +47,16 @@ TEST_CASE("Database обновляет задачи", "[database]") {
         Task task;
         db.get_task(id, task);
         REQUIRE(task.status == "in_progress");
-        REQUIRE(task.title == "Задача");  
+        REQUIRE(task.title == "Task");
     }
 }
 
-TEST_CASE("Database удаляет задачи", "[database]") {
+TEST_CASE("Database deletes tasks", "[database]") {
     Database db(":memory:");
 
-    int id = db.create_task("На удаление", "", "todo");
+    int id = db.create_task("To delete", "", "todo");
 
-    SECTION("Удаление существующей задачи") {
+    SECTION("Deleting an existing task") {
         bool deleted = db.delete_task(id);
         REQUIRE(deleted == true);
 
@@ -67,27 +65,26 @@ TEST_CASE("Database удаляет задачи", "[database]") {
         REQUIRE(found == false);
     }
 
-    SECTION("Удаление несуществующей задачи") {
+    SECTION("Deleting a non-existent task") {
         bool deleted = db.delete_task(9999);
         REQUIRE(deleted == false);
     }
 }
 
-TEST_CASE("Кеш базы данных", "[cache]") {
+TEST_CASE("Database cache", "[cache]") {
     Database db(":memory:");
 
-    SECTION("Кеш пуст изначально") {
+    SECTION("Cache is empty initially") {
         REQUIRE(db.get_cache_size() == 0);
     }
 
-    SECTION("После чтения задач кеш заполняется") {
-        db.create_task("Задача 1", "", "todo");
-        db.create_task("Задача 2", "", "todo");
+    SECTION("Cache is populated after reading tasks") {
+        db.create_task("Task 1", "", "todo");
+        db.create_task("Task 2", "", "todo");
 
         auto tasks1 = db.get_all_tasks();
         auto tasks2 = db.get_all_tasks();
 
-       
         REQUIRE(tasks1.size() == 2);
         REQUIRE(tasks2.size() == 2);
     }
