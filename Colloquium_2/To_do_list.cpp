@@ -80,7 +80,7 @@ int main() {
 
     // GET /tasks
     svr.Get("/tasks", [&](const Request& req, Response& res) {
-       
+        
         auto tasks = db.get_all_tasks();
         res.set_content(json(tasks).dump(), "application/json");
 
@@ -92,7 +92,7 @@ int main() {
 
     // GET /tasks/{id}
     svr.Get("/tasks/:id", [&](const Request& req, Response& res) {
-       
+        if (!api_gateway_check(req, res)) return;
         int id = std::stoi(req.path_params.at("id"));
         Task t;
         if (db.get_task(id, t)) {
